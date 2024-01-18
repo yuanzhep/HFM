@@ -127,12 +127,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description='fedmm_yz_m40')
     parser.add_argument('--seed', type=int, nargs='?', default=3407)
     parser.add_argument('--silos', type=int, nargs='?', default=5)
-    parser.add_argument('--parties', type=int, nargs='?', default=2)
+    parser.add_argument('--parties', type=int, nargs='?', default=12)
     parser.add_argument('--gepochs', type=int, nargs='?', default=100)
     parser.add_argument('--Q', type=int, nargs='?', default=5)
     parser.add_argument('--R', type=int, nargs='?', default=2)
     parser.add_argument('--batchsize', type=int, nargs='?', default=512)
-    parser.add_argument('--lr', type=float, nargs='?', default=0.01)
+    parser.add_argument('--lr', type=float, nargs='?', default=0.001)
     parser.add_argument('--evalafter', type=float, nargs='?', default=1)
     parser.add_argument('--withreplacement', action='store_true')
     parser.add_argument('--momentum', type=float, nargs='?', default=0)
@@ -141,7 +141,6 @@ def parse_args():
     parser.add_argument('--stepLR', action='store_true')
     parser.add_argument('--modelnet_type', type=str, nargs='?', default="40")
     parser.add_argument('--device', type=str, nargs='?', default='cuda:0')
-
     args = parser.parse_args()
     # print(args)
     return args
@@ -322,11 +321,9 @@ if __name__ == "__main__":
                             continue
                         else:
                             output_top_from_other_hub_client.append(batch_indices_and_exchange_info_for_epoch[dc_index][device.device_index][iteration]["embedding"])
-
                     if len(output_top_from_other_hub_client)>0:
                         output_top_from_other_hub_client = torch.stack(output_top_from_other_hub_client, dim=0).sum(dim=0)
                     output_top = output
-
                     if K>1:
                         total_output = output_top+output_top_from_other_hub_client
                     else:
@@ -344,7 +341,6 @@ if __name__ == "__main__":
             for device_idx, device in enumerate(current_DC.device_list):
                 device.network = copy.deepcopy(current_DC.average_network)
                 device.reset_optimizer()
-
         PATH = (f"Checkpoint_BS{local_batch_size}_M{M}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr{alpha}_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_modelnet{args.modelnet_type}.pt")
         torch.save({
             'epoch': t,
