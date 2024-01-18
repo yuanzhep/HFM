@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-FedMM
-author: yz
+fedmm, yz
 0115/2024
 """
 
