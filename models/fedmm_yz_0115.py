@@ -28,7 +28,8 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 from typing import Dict
 from typing import Any
-from load_modelnet_10 import load_modelnet_10_data
+# from load_modelnet_10 import load_modelnet_10_data
+from fedmm.utilities.utils import average_models
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -130,9 +131,9 @@ def parse_args():
     parser.add_argument('--gepochs', type=int, nargs='?', default=100)
     parser.add_argument('--Q', type=int, nargs='?', default=5)
     parser.add_argument('--R', type=int, nargs='?', default=2)
-    parser.add_argument('--batchsize', type=int, nargs='?', default=160)
+    parser.add_argument('--batchsize', type=int, nargs='?', default=512)
     parser.add_argument('--lr', type=float, nargs='?', default=0.01)
-    parser.add_argument('--evalafter', type=float, nargs='?', default=5)
+    parser.add_argument('--evalafter', type=float, nargs='?', default=1)
     parser.add_argument('--withreplacement', action='store_true')
     parser.add_argument('--momentum', type=float, nargs='?', default=0)
     parser.add_argument('--lambduh', type=float, nargs='?', default=0.01)
