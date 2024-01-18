@@ -28,7 +28,8 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 from typing import Dict
 from typing import Any
-from load_modelnet_10 import load_modelnet_10_data
+# from load_modelnet_10 import load_modelnet_10_data
+from fedmm.utilities.utils import average_models
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
