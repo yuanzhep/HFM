@@ -16,11 +16,11 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
     - [guitar_0127.off](#guitar_0127off)
       - [guitar_0127.0.png](#guitar_01270png)
       - [guitar_0127.1.png](#guitar_01271png)
-      - ...
+      - &verbar;&verbar;&verbar; ...
     - [piano_0031.off](#piano_0031off)
       - [piano_0031.0.png](#piano_00310png)
       - [piano_0031.1.png](#piano_00311png)
-      - ...
+      - &verbar;&verbar;&verbar; ...
   - [raw](#raw)
     - [ADMISSIONS.csv](#admissionscsv)
     - [CALLOUT.csv](#calloutcsv)
