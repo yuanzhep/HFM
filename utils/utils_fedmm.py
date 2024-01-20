@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-fedmm, yz
-01/14/2024
+yz
+01/13/2024, silo avg
 """
 
 import numpy as np
@@ -19,6 +19,13 @@ from PIL import Image
 from print_metrics import print_metrics_binary
 from sklearn.utils import shuffle
 
+def average_models(model, silo_models):
+    num_silo = len(silo_models)
+    theta_sum = np.zeros(model.shape)
+    for theta in silo_models:
+        theta_sum += theta
+    model = theta_sum / num_silo
+    return model
 
 def normalize(x, means=None, stds=None):
     num_dims = x.shape[1]
@@ -38,7 +45,6 @@ def normalize(x, means=None, stds=None):
             st = stds[dim]
             x[:, dim, :, :] = (x[:, dim, :, :] - m)/st
         return x , None, None
-    
     
 class CustomTensorDataset(Dataset):
     def __init__(self, tensors, transform=None):
@@ -131,100 +137,7 @@ class MultiViewDataSet(Dataset):
                 images.append(im)
             res.append(images)
         return res
-    
-    
-class CifarNet(nn.Module):
-    def __init__(self, ensemble=False):
-        super(CifarNet, self).__init__()
-        self.ensemble = ensemble
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=(5,5))
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=(5,3))
-        self.fc1 = nn.Linear(128*5*2, 512)
-        self.fc2 = nn.Linear(512, 256)
-
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        x = x.view(-1, 128*5*2)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x 
-
-class CifarNetCombined(nn.Module):
-    def __init__(self, ensemble=False, nb_classes=10, bias=False):
-        super(CifarNetCombined, self).__init__()
-        self.ensemble = ensemble
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=(5,5))
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=(5,3))
-        self.fc1 = nn.Linear(128*5*2, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, nb_classes, bias=bias)
-
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        x = x.view(-1, 128*5*2)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x 
-
-class CifarNetSimpleSmaller(nn.Module):
-    def __init__(self, nb_classes=10, bias=False):
-        super(CifarNetSimpleSmaller, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=(3,3), padding=2)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64,kernel_size=(3,3), padding=2)
-        self.conv3 = nn.Conv2d(64, 64,kernel_size=(3,3))
-        self.fc1 = nn.Linear(64 * 7 * 3, 64)
-        self.fc2 = nn.Linear(64, nb_classes, bias=bias)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.conv3(x)
-        x = torch.flatten(x, 1) 
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-class CifarNet2(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(3,   64,  3)
-        self.conv2 = nn.Conv2d(64,  128, 3)
-        self.conv3 = nn.Conv2d(128, 256, 3)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(64 * 4 * 4, 128)
-        self.fc2 = nn.Linear(128, 256)
-        self.fc3 = nn.Linear(256, 10)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = x.view(-1, 64 * 4 * 4)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return F.log_softmax(x, dim=1)
-
-class MNIST_NET(nn.Module):
-    def __init__(self, ensemble=False):
-        super(MNIST_NET, self).__init__()
-        self.ensemble = ensemble
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=(5,3))
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=(5,3))
-        self.fc1 = nn.Linear(64*4*2, 256)
-
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        x = x.view(-1, 64*4*2)
-        x = self.fc1(x)
-        return x 
-    
-    
+  
 class TopLayer(nn.Module):
     def __init__(self, linear_size=512, nb_classes=10, bias = False):
         super(TopLayer, self).__init__()
@@ -234,61 +147,60 @@ class TopLayer(nn.Module):
         x = self.classifier(F.relu(x))
         return x
     
-    
-class MVCNN_NET(nn.Module):
-    def __init__(self, num_classes=10):
-        super(MVCNN_NET, self).__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(64, 192, kernel_size=5, padding=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(192, 384, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(384, 256, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-        )
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(256 * 6 * 6, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, 1024),
-            #nn.ReLU(inplace=True),
-            #nn.Linear(4096, num_classes),
-        )
+# class MVCNN_NET(nn.Module):
+#     def __init__(self, num_classes=10):
+#         super(MVCNN_NET, self).__init__()
+#         self.features = nn.Sequential(
+#             nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=3, stride=2),
+#             nn.Conv2d(64, 192, kernel_size=5, padding=2),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=3, stride=2),
+#             nn.Conv2d(192, 384, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(384, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=3, stride=2),
+#         )
+#         self.classifier = nn.Sequential(
+#             nn.Dropout(),
+#             nn.Linear(256 * 6 * 6, 4096),
+#             nn.ReLU(inplace=True),
+#             nn.Dropout(),
+#             nn.Linear(4096, 1024),
+#             #nn.ReLU(inplace=True),
+#             #nn.Linear(4096, num_classes),
+#         )
 
-    def forward(self, x):
-        x = x.transpose(0, 1)
-        view_pool = []
+#     def forward(self, x):
+#         x = x.transpose(0, 1)
+#         view_pool = []
         
-        for v in x:
-            v = self.features(v)
-            v = v.view(v.size(0), 256 * 6 * 6)
+#         for v in x:
+#             v = self.features(v)
+#             v = v.view(v.size(0), 256 * 6 * 6)
             
-            view_pool.append(v)
+#             view_pool.append(v)
         
-        pooled_view = view_pool[0]
-        for i in range(1, len(view_pool)):
-            pooled_view = torch.max(pooled_view, view_pool[i])
+#         pooled_view = view_pool[0]
+#         for i in range(1, len(view_pool)):
+#             pooled_view = torch.max(pooled_view, view_pool[i])
         
-        pooled_view = self.classifier(pooled_view)
-        return pooled_view    
+#         pooled_view = self.classifier(pooled_view)
+#         return pooled_view    
     
     
-class MVCNN_toplayer(nn.Module):
-    def __init__(self, linear_size=4096, nb_classes=10, bias = False):
-        super(MVCNN_toplayer, self).__init__()
-        self.classifier = nn.Linear(1024+1024+1024+1024, nb_classes, bias=bias)
+# class MVCNN_toplayer(nn.Module):
+#     def __init__(self, linear_size=4096, nb_classes=10, bias = False):
+#         super(MVCNN_toplayer, self).__init__()
+#         self.classifier = nn.Linear(1024+1024+1024+1024, nb_classes, bias=bias)
         
-    def forward(self, x):
-        x = self.classifier(F.relu(x))
-        return x
+#     def forward(self, x):
+#         x = self.classifier(F.relu(x))
+#         return x
     
 class MIMICIII_LSTM_combined(nn.Module):
     def __init__(self, dim, input_dim, dropout=0.0, num_classes=1,
@@ -306,7 +218,6 @@ class MIMICIII_LSTM_combined(nn.Module):
         self.do = nn.Dropout(dropout)
         self.linear = nn.Linear(self.hidden_dim, num_classes) 
         
-    
     def forward(self, x):
         training_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.lstm.flatten_parameters()
@@ -314,8 +225,7 @@ class MIMICIII_LSTM_combined(nn.Module):
         h2 = h2.view(-1, self.hidden_dim) #== lstm_out2[:, -1, :]
         output = self.linear(h2)
         return output
-        
-        
+         
     def initialize_weights(self, model):
         if type(model) in [nn.Linear]:
             nn.init.xavier_uniform_(model.weight)
@@ -349,7 +259,6 @@ class MIMICIII_LSTM(nn.Module):
         
         self.do = nn.Dropout(dropout)
         
-    
     def forward(self, x):
         training_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.biLSTM.flatten_parameters()
@@ -362,7 +271,6 @@ class MIMICIII_LSTM(nn.Module):
         h2 = h2.view(-1, self.hidden_dim) #== lstm_out2[:, -1, :]
         output = h2
         return output
-        
         
     def initialize_weights(self, model):
         if type(model) in [nn.Linear]:
@@ -384,7 +292,6 @@ class MIMICIII_lstm_toplayer(nn.Module):
         x = self.classifier(self.dropout(x))
         return x
     
-    
 def add_model(dst_model, src_model):
     params1 = src_model.named_parameters()
     params2 = dst_model.named_parameters()
@@ -395,7 +302,6 @@ def add_model(dst_model, src_model):
                 dict_params2[name1].set_(param1.data + dict_params2[name1].data)
     return dst_model
 
-
 def scale_model(model, scale):
     params = model.named_parameters()
     dict_params = dict(params)
@@ -403,7 +309,6 @@ def scale_model(model, scale):
         for name, param in dict_params.items():
             dict_params[name].set_(dict_params[name].data * scale)
     return model
-
 
 def federated_avg(models: Dict[Any, torch.nn.Module]) -> torch.nn.Module:
     nr_models = len(models)
@@ -418,7 +323,6 @@ def federated_avg(models: Dict[Any, torch.nn.Module]) -> torch.nn.Module:
         model = add_model(model, model_list[i])
     model = scale_model(model, 1.0 / nr_models)
     return model
-
 
 def get_train_or_test_loss(network_left,network_right,overall_top_layer,
                            overall_train_dataloader, 
@@ -473,13 +377,11 @@ def get_train_or_test_loss(network_left,network_right,overall_top_layer,
             test_loss, test_correct, len(overall_test_dataloader.dataset),
             100. * test_correct / len(overall_test_dataloader.dataset)))
 
-
 def general_get_train_or_test_loss_lstm(networks:List,
                                    overall_top_layer,
                                    overall_train_dataloader, 
                                    overall_test_dataloader, 
                                    report, coordinate_partitions=None):
-
     num_parties = len(networks)
     for network in networks:
         network.eval()
@@ -522,8 +424,7 @@ def general_get_train_or_test_loss_lstm(networks:List,
         print('\nEntire Training set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             train_loss, train_correct, len(overall_train_dataloader.dataset),
             100. * train_correct / len(overall_train_dataloader.dataset)))
-        
-        
+             
     targets = []
     probabilities = []
     with torch.no_grad():
@@ -602,7 +503,6 @@ def general_get_train_or_test_loss_lstm_combined(networks:List,
             train_loss, train_correct, len(overall_train_dataloader.dataset),
             100. * train_correct / len(overall_train_dataloader.dataset)))
                
-        
     targets = []
     probabilities = []
     with torch.no_grad():
@@ -635,7 +535,6 @@ def general_get_train_or_test_loss_lstm_combined(networks:List,
         print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             test_loss, test_correct, len(overall_test_dataloader.dataset),
             100. * test_correct / len(overall_test_dataloader.dataset)))
-        
          
 def accuracy(output, target, topk=(1,)):
     with torch.no_grad():
@@ -651,8 +550,7 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum()
             res.append(correct_k.mul_(100.0))
         return res
-        
-        
+               
 def get_train_or_test_loss_generic(networks:List,
                                    overall_train_dataloader, 
                                    overall_test_dataloader, 
@@ -767,17 +665,13 @@ def get_train_or_test_loss_simplified_cifar(network_left,network_right,overall_t
         report["test_loss"].append(test_loss)
         report["test_accuracy"].append(100. * test_correct / len(overall_test_dataloader.dataset))
         
-        
         print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             test_loss, test_correct, len(overall_test_dataloader.dataset),
             100. * test_correct / len(overall_test_dataloader.dataset)))
 
-if __name__ == "__main__":
-    one = nn.Conv2d(20,13, 3)
-    two =nn.Conv2d(20,13, 3)
-    three = nn.Conv2d(20,13, 3)
-    bb = federated_avg({1:one, 2:two, 3:three})
-    assert torch.isclose(bb.weight.data, (one.weight.data + two.weight.data + three.weight.data)/3.0).sum() == bb.weight.data.numel()
-    
-    
-
+# if __name__ == "__main__":
+#     one = nn.Conv2d(20, 13, 3)
+#     two =nn.Conv2d(20, 13, 3)
+#     three = nn.Conv2d(20, 13, 3)
+#     bb = federated_avg({1:one, 2:two, 3:three})
+#     assert torch.isclose(bb.weight.data, (one.weight.data + two.weight.data + three.weight.data)/3.0).sum() == bb.weight.data.numel()
