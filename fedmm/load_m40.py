@@ -1,3 +1,8 @@
+"""
+fedmm, yz
+01/08/2024, m40
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
@@ -5,11 +10,6 @@ import os
 import torchvision.transforms as transforms
 from PIL import Image
 import torch
-
-"""
-fedmm, yz
-01/08/2024, m40 and m10
-"""
 
 def find_classes(dir):
     classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
