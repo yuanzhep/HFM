@@ -4,8 +4,9 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
 
 <img src="fig/memory.jpg" width="400">
 
+```bash
 - [data](#data)
-  - [LICENSE.txt](#licensetxt)
+  - [LICENSE.txt](#license)
   - [micmic3..tar.gz](#micmic3targz)
   - [mimic3_demo](#mimic3_demo)
     - [10032_episode1_timeseries.csv](#10032_episode1_timeseriescsv)
@@ -27,10 +28,10 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
     - [PATIENTS.csv](#patientscsv)
 - [fedmm](#fedmm-1)
   - [fedmm_yz_0115.py](#fedmm_yz_0115py)
-  - [__init__.py](#__init__py)
+  - [__init__.py](#initpy)
   - [load_m40.py](#load_m40py)
   - [utilities](#utilities)
-    - [__init__.py](#__init__py-1)
+    - [__init__.py](#initpy-1)
     - [utils.py](#utilspy)
   - [worker_1.py](#worker_1py)
   - [worker_2.py](#worker_2py)
@@ -42,7 +43,7 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
   - [fedmm_log_20240114172553.txt](#fedmm_log_20240114172553txt)
   - [memory_m40.png](#memory_m40png)
 - [models](#models)
-  - [__init__.py](#__init__py-2)
+  - [__init__.py](#initpy-2)
   - [resnet.py](#resnetpy)
   - [res.py](#respy)
 - [utils](#utils)
@@ -50,7 +51,7 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
   - [utils_fedmm.py](#utils_fedmmpy)
 - [FedMM.yml](#fedmmyml)
 - [README.md](#readmemd)
-
+```
 
 You can access the ModelNet-40 data [here](https://modelnet.cs.princeton.edu/).
 
@@ -58,3 +59,4 @@ You can access the (full) Mimic-III data [here](https://physionet.org/content/mi
 ![FedMM-D](fig/m3.jpg)
 ```bash
 wget -r -N -c -np --user yzpeng --ask-password https://physionet.org/files/mimiciii/1.4/
+```
