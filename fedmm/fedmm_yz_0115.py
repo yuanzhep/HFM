@@ -124,6 +124,7 @@ class Device(object):
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser(description='fedmm_yz_m40')
+    # 33156, 618, 1111, 1022, 33134, 33143, 3407, 33146, 10086, 110
     parser.add_argument('--seed', type=int, nargs='?', default=618)
     # parser.add_argument('--seed', type=int, nargs='?', default=1111)
     # parser.add_argument('--seed', type=int, nargs='?', default=42)
