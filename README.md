@@ -4,8 +4,6 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
 
 <img src="fig/memory.jpg" width="400">
 
-# fedmm
-
 - [data](#data)
   - [LICENSE.txt](#licensetxt)
   - [micmic3..tar.gz](#micmic3targz)
