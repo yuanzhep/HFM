@@ -1,5 +1,4 @@
-# pre_trained
-
+# fedmm icassp2024 version
 import os
 import torch
 import logging
