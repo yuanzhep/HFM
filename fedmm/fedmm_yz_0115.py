@@ -8,6 +8,7 @@ v1.1, 0116/2024/0259, fix K coordinate descent issue.
 v1.2, 0116/2024/0917, check VFL correct.
 v1.3, 0116/2024/1508, check HFL correct.
 v1.4, 0116/2024, Running on cuda:0, 29,881 MiB memory.
+v1.5, 0120/2024, fix one minor issue about def main.
 """
 
 import logging
@@ -147,19 +148,15 @@ def parse_args():
     parser.add_argument('--device', type=str, nargs='?', default='cuda:0')
     args = parser.parse_args()
     return args
-
-if __name__ == "__main__":
-
+    
+def main():
     log_path = '/a/bear.cs.fiu.edu./disk/bear-c/users/rxm1351/yz/0108fedmm/fedmm/log/m40/'
     log_filename = f"{log_path}modelnet40_0115_log_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
     seeds = [618, 1111, 1022, 33134, 33143, 3407, 33146, 10086, 110, 33156]
-
     for seed in seeds:
         args = parse_args()
         args.seed = seed
-
         random.seed(args.seed)
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -219,12 +216,10 @@ if __name__ == "__main__":
             else:
                 coordinate_partitions.append(list(range(i, i+ coordinate_per_dc )))
                 i=i+coordinate_per_dc
-
         over_train_loader = torch.utils.data.DataLoader(CustomTensorDataset(tensors=(X_train, y_train), transform=None)
                                         , batch_size=int(args.batchsize/K), shuffle=False)
         over_test_loader = torch.utils.data.DataLoader(CustomTensorDataset(tensors=(X_test, y_test), transform=None)
                                         , batch_size=int(args.batchsize/K), shuffle=False)
-
         for m in range(M):
             for k in range(K):
                 coordinate_per_dc = len(coordinate_partitions[i])
@@ -244,7 +239,6 @@ if __name__ == "__main__":
                                             network = copy.deepcopy(network_local),
                                             sampling_with_replacement= args.withreplacement
                                         ))
-
             dc_list.append(CD(alpha=alpha,
                               X=dc_X,
                               y=y_train,
@@ -361,3 +355,6 @@ if __name__ == "__main__":
                 filename =f"BS{local_batch_size}_N{N}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr[{alpha},0.005,0.001]_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_eval{args.evaluateateveryiteration}_evalafter{args.evalafter}_modelnet{args.modelnet_type}.pkl" 
             f = open(os.path.join(args.resultfolder, filename), "wb")
             pickle.dump(report, f)
+
+if __name__ == "__main__":
+    main()
