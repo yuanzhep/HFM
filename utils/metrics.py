@@ -16,17 +16,17 @@ def print_metrics_binary(y_true, predictions, verbose=1):
     if len(predictions.shape) == 1:
         predictions = np.stack([1 - predictions, predictions]).transpose((1, 0))
 
-    cf = metrics.confusion_matrix(y_true, predictions.argmax(axis=1))
+    m40 = metrics.confusion_matrix(y_true, predictions.argmax(axis=1))
     if verbose:
         print("confusion matrix:")
-        print(cf)
-    cf = cf.astype(np.float32)
+        print(m40)
+    m40 = m40.astype(np.float32)
 
-    acc = (cf[0][0] + cf[1][1]) / np.sum(cf)
-    prec0 = cf[0][0] / (cf[0][0] + cf[1][0])
-    prec1 = cf[1][1] / (cf[1][1] + cf[0][1])
-    rec0 = cf[0][0] / (cf[0][0] + cf[0][1])
-    rec1 = cf[1][1] / (cf[1][1] + cf[1][0])
+    acc = (m40[0][0] + m40[1][1]) / np.sum(m40)
+    prec0 = m40[0][0] / (m40[0][0] + m40[1][0])
+    prec1 = m40[1][1] / (m40[1][1] + m40[0][1])
+    rec0 = m40[0][0] / (m40[0][0] + m40[0][1])
+    rec1 = m40[1][1] / (m40[1][1] + m40[1][0])
     auroc = metrics.roc_auc_score(y_true, predictions[:, 1])
     f1_score = metrics.f1_score(y_true, predictions.argmax(axis=1))
     (precisions, recalls, thresholds) = metrics.precision_recall_curve(y_true, predictions[:, 1])
