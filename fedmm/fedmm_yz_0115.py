@@ -350,9 +350,9 @@ def main():
             }, PATH)
             os.makedirs(f"{args.resultfolder}", exist_ok=True)
             if not args.stepLR:
-                filename =f"BS{local_batch_size}_N{N}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr{alpha}_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_eval{args.evaluateateveryiteration}_evalafter{args.evalafter}_modelnet{args.modelnet_type}.pkl" 
+                filename =f"BS{local_batch_size}_M{M}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr{alpha}_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_eval{args.evaluateateveryiteration}_evalafter{args.evalafter}_modelnet{args.modelnet_type}.pkl" 
             else:
-                filename =f"BS{local_batch_size}_N{N}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr[{alpha},0.005,0.001]_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_eval{args.evaluateateveryiteration}_evalafter{args.evalafter}_modelnet{args.modelnet_type}.pkl" 
+                filename =f"BS{local_batch_size}_M{M}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr[{alpha},0.005,0.001]_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_eval{args.evaluateateveryiteration}_evalafter{args.evalafter}_modelnet{args.modelnet_type}.pkl" 
             f = open(os.path.join(args.resultfolder, filename), "wb")
             pickle.dump(report, f)
 
