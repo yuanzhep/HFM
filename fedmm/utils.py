@@ -1,616 +1,441 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-yz
-01/13/2024, silo avg
-"""
+# 0123/2024, fedmm only consider ihm
 
 import numpy as np
-import torch
-from torch.utils.data import Dataset
-import torch.nn as nn
-import torch.nn.functional as F
-from typing import Any, Dict, List
-import random
-import copy
-import os
-from tqdm import tqdm
-from PIL import Image
-from print_metrics import print_metrics_binary
-from sklearn.utils import shuffle
+import keras
+import keras.backend as K
 
-def average_models(model, silo_models):
-    num_silo = len(silo_models)
-    theta_sum = np.zeros(model.shape)
-    for theta in silo_models:
-        theta_sum += theta
-    model = theta_sum / num_silo
-    return model
+from mimic3models import metrics
 
-def normalize(x, means=None, stds=None):
-    num_dims = x.shape[1]
-    if means is None and stds is None:
-        means = []
-        stds = []
-        for dim in range(num_dims):
-            m = x[:, dim, :, :].mean()
-            st = x[:, dim, :, :].std()
-            x[:, dim, :, :] = (x[:, dim, :, :] - m)/st
-            means.append(m.item())
-            stds.append(st.item())
-        return x , means, stds
-    else:
-        for dim in range(num_dims):
-            m = means[dim]
-            st = stds[dim]
-            x[:, dim, :, :] = (x[:, dim, :, :] - m)/st
-        return x , None, None
-    
-class CustomTensorDataset(Dataset):
-    def __init__(self, tensors, transform=None):
-        assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors)
-        self.tensors = tensors
-        self.transform = transform
+if K.backend() == 'tensorflow':
+    import tensorflow as tf
 
-    def __getitem__(self, index):
-        x = self.tensors[0][index]
-        if self.transform:
-            x = self.transform(x)
-        y = self.tensors[1][index]
-        return x, y, index
+from keras.layers import Layer
 
-    def __len__(self):
-        return self.tensors[0].size(0)
-    
-class MultiViewDataSet(Dataset):
+class DecompensationMetrics(keras.callbacks.Callback):
+    def __init__(self, train_data_gen, val_data_gen, deep_supervision,
+                 batch_size=32, early_stopping=True, verbose=2):
+        super(DecompensationMetrics, self).__init__()
+        self.train_data_gen = train_data_gen
+        self.val_data_gen = val_data_gen
+        self.deep_supervision = deep_supervision
+        self.batch_size = batch_size
+        self.early_stopping = early_stopping
+        self.verbose = verbose
+        self.train_history = []
+        self.val_history = []
 
-    def find_classes(self, dir):
-        classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
-        classes.sort()
-        class_to_idx = {classes[i]: i for i in range(len(classes))}
+    def calc_metrics(self, data_gen, history, dataset, logs):
+        y_true = []
+        predictions = []
+        for i in range(data_gen.steps):
+            if self.verbose == 1:
+                print("\tdone {}/{}".format(i, data_gen.steps), end='\r')
+            (x, y) = next(data_gen)
+            pred = self.model.predict(x, batch_size=self.batch_size)
+            if self.deep_supervision:
+                for m, t, p in zip(x[1].flatten(), y.flatten(), pred.flatten()):
+                    if np.equal(m, 1):
+                        y_true.append(t)
+                        predictions.append(p)
+            else:
+                y_true += list(y.flatten())
+                predictions += list(pred.flatten())
+        print('\n')
+        predictions = np.array(predictions)
+        predictions = np.stack([1 - predictions, predictions], axis=1)
+        ret = metrics.print_metrics_binary(y_true, predictions)
+        for k, v in ret.items():
+            logs[dataset + '_' + k] = v
+        history.append(ret)
 
-        return classes, class_to_idx
+    def on_epoch_end(self, epoch, logs={}):
+        print("\n==>predicting on train")
+        self.calc_metrics(self.train_data_gen, self.train_history, 'train', logs)
+        print("\n==>predicting on validation")
+        self.calc_metrics(self.val_data_gen, self.val_history, 'val', logs)
 
-    def __init__(self, root, data_type, transform=None, target_transform=None, perform_transform=False, datapoints=0, seed=42):
-        torch.manual_seed(seed)
-        np.random.seed(seed)
-        random.seed(seed)
-        
-        self.x = []
-        self.y = []
-        self.root = root
-        self.x, self.y = shuffle(self.x,self.y, random_state=seed)
+        if self.early_stopping:
+            max_auc = np.max([x["auroc"] for x in self.val_history])
+            cur_auc = self.val_history[-1]["auroc"]
+            if max_auc > 0.88 and cur_auc < 0.86:
+                self.model.stop_training = True
 
-        self.classes, self.class_to_idx = self.find_classes(root)
-        self.transform = transform
-        self.target_transform = target_transform
-        self.perform_transform = perform_transform
-        self.datapoints = datapoints
-        # root / <label>  / <train/test> / <item> / <view>.png
-        for label in os.listdir(root): # Label
-            for item in os.listdir(root + '/' + label + '/' + data_type):
-                views = []
-                for view in os.listdir(root + '/' + label + '/' + data_type + '/' + item):
-                    views.append(root + '/' + label + '/' + data_type + '/' + item + '/' + view)
+class InHospitalMortalityMetrics(keras.callbacks.Callback):
+    def __init__(self, train_data, val_data, target_repl, batch_size=32, early_stopping=True, verbose=2):
+        super(InHospitalMortalityMetrics, self).__init__()
+        self.train_data = train_data
+        self.val_data = val_data
+        self.target_repl = target_repl
+        self.batch_size = batch_size
+        self.early_stopping = early_stopping
+        self.verbose = verbose
+        self.train_history = []
+        self.val_history = []
 
-                self.x.append(views)
-                self.y.append(self.class_to_idx[label])
-                
-        if datapoints>0:
-            self.x = self.x[:self.datapoints]
-            self.y = self.y[:self.datapoints]
-        
-        if perform_transform:
-            # perform the transform upfron instead of waiting for later
-            self.x = self.transformDataset(self.x, self.transform)
-        
-    def __getitem__(self, index):
-        orginal_views = self.x[index]
-        views = []
-        if not self.perform_transform:
-            for view in orginal_views:
-                im = Image.open(view)
-                im = im.convert('RGB')
-                if self.transform is not None:
-                    im = self.transform(im)
-                views.append(im)
-    
-            return views, self.y[index], index
-        else:
-            return orginal_views, self.y[index], index
-                     
-    def __len__(self):
-        return len(self.x)
-    
-    def transformDataset(self, data, transform):
-        print("Transforming Dataset using ", transform)
-        res = []
-        for sample in tqdm(data):
-            images = []
-            for view in sample:
-                im = Image.open(view)
-                im = im.convert('RGB')
-                im = transform(im)
-                images.append(im)
-            res.append(images)
-        return res
-  
-class TopLayer(nn.Module):
-    def __init__(self, linear_size=512, nb_classes=10, bias = False):
-        super(TopLayer, self).__init__()
-        self.classifier = nn.Linear(256+256, nb_classes, bias=bias)
-        
-    def forward(self, x):
-        x = self.classifier(F.relu(x))
-        return x
-    
-class MIMICIII_LSTM_combined(nn.Module):
-    def __init__(self, dim, input_dim, dropout=0.0, num_classes=1,
-                 num_layers=1, batch_first=True, **kwargs):
-        super(MIMICIII_LSTM_combined, self).__init__()
-        self.hidden_dim = dim
-        self.input_dim = input_dim
-        self.num_layers = num_layers
-        
-        self.lstm = nn.LSTM(input_size=self.input_dim, 
-                            hidden_size=self.hidden_dim,
-                            batch_first=batch_first)
-        
-        # self.initialize_weights(self.lstm)
-        self.do = nn.Dropout(dropout)
-        self.linear = nn.Linear(self.hidden_dim, num_classes) 
-        
-    def forward(self, x):
-        training_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.lstm.flatten_parameters()
-        lstm_out2, (h2, c2) = self.lstm(self.do(x))
-        h2 = h2.view(-1, self.hidden_dim) #== lstm_out2[:, -1, :]
-        output = self.linear(h2)
-        return output
-         
-    def initialize_weights(self, model):
-        if type(model) in [nn.Linear]:
-            nn.init.xavier_uniform_(model.weight)
-            nn.init.zeros_(model.bias)
-        elif type(model) in [nn.LSTM, nn.RNN, nn.GRU]:
-            nn.init.orthogonal_(model.weight_hh_l0)
-            nn.init.xavier_uniform_(model.weight_ih_l0)
-            nn.init.zeros_(model.bias_hh_l0)
-            nn.init.zeros_(model.bias_ih_l0)
+    def calc_metrics(self, data, history, dataset, logs):
+        y_true = []
+        predictions = []
+        B = self.batch_size
+        for i in range(0, len(data[0]), B):
+            if self.verbose == 1:
+                print("\tdone {}/{}".format(i, len(data[0])), end='\r')
+            if self.target_repl:
+                (x, y, y_repl) = (data[0][i:i + B], data[1][0][i:i + B], data[1][1][i:i + B])
+            else:
+                (x, y) = (data[0][i:i + B], data[1][i:i + B])
+            outputs = self.model.predict(x, batch_size=B)
+            if self.target_repl:
+                predictions += list(np.array(outputs[0]).flatten())
+            else:
+                predictions += list(np.array(outputs).flatten())
+            y_true += list(np.array(y).flatten())
+        print('\n')
+        predictions = np.array(predictions)
+        predictions = np.stack([1 - predictions, predictions], axis=1)
+        ret = metrics.print_metrics_binary(y_true, predictions)
+        for k, v in ret.items():
+            logs[dataset + '_' + k] = v
+        history.append(ret)
 
-class MIMICIII_LSTM(nn.Module):
-    def __init__(self, dim, input_dim, dropout=0.0, num_classes=1,
-                 num_layers=1, batch_first=True, **kwargs):
-        super(MIMICIII_LSTM, self).__init__()
-        self.hidden_dim = dim
-        self.input_dim = input_dim
-        self.num_layers = num_layers
-    
-        self.biLSTM = nn.LSTM(input_size=self.input_dim, 
-                              hidden_size=self.hidden_dim//2, 
-                              num_layers=1, 
-                              bidirectional=True, 
-                              batch_first=batch_first)
-        
-        self.lstm = nn.LSTM(input_size=self.hidden_dim, 
-                            hidden_size=self.hidden_dim,
-                            batch_first=batch_first)
-        
-        self.initialize_weights(self.biLSTM)
-        self.initialize_weights(self.lstm)
-        
-        self.do = nn.Dropout(dropout)
-        
-    def forward(self, x):
-        training_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.biLSTM.flatten_parameters()
-        h0 = torch.zeros(2, x.size(0), self.hidden_dim//2).to(training_device) 
-        c0 = torch.zeros(2, x.size(0), self.hidden_dim//2).to(training_device)
-        lstm_out1, (h1, c1) = self.biLSTM(x, (h0, c0))
-        self.lstm.flatten_parameters()
-        lstm_out2, (h2, c2) = self.lstm(self.do(lstm_out1))
-        h2 = h2.view(-1, self.hidden_dim) 
-        output = h2
-        return output
-        
-    def initialize_weights(self, model):
-        if type(model) in [nn.Linear]:
-            nn.init.xavier_uniform_(model.weight)
-            nn.init.zeros_(model.bias)
-        elif type(model) in [nn.LSTM, nn.RNN, nn.GRU]:
-            nn.init.orthogonal_(model.weight_hh_l0)
-            nn.init.xavier_uniform_(model.weight_ih_l0)
-            nn.init.zeros_(model.bias_hh_l0)
-            nn.init.zeros_(model.bias_ih_l0)
+    def on_epoch_end(self, epoch, logs={}):
+        print("\n==>predicting on train")
+        self.calc_metrics(self.train_data, self.train_history, 'train', logs)
+        print("\n==>predicting on validation")
+        self.calc_metrics(self.val_data, self.val_history, 'val', logs)
 
-class MIMICIII_lstm_toplayer(nn.Module):
-    def __init__(self, linear_size=64, nb_classes=1, dropout= 0.0, bias = False):
-        super(MIMICIII_lstm_toplayer, self).__init__()
-        self.dropout = nn.Dropout(dropout)
-        self.classifier = nn.Linear(linear_size, nb_classes, bias=bias)
-        
-    def forward(self, x):
-        x = self.classifier(self.dropout(x))
-        return x
-    
-def add_model(dst_model, src_model):
-    params1 = src_model.named_parameters()
-    params2 = dst_model.named_parameters()
-    dict_params2 = dict(params2)
-    with torch.no_grad():
-        for name1, param1 in params1:
-            if name1 in dict_params2:
-                dict_params2[name1].set_(param1.data + dict_params2[name1].data)
-    return dst_model
+        if self.early_stopping:
+            max_auc = np.max([x["auroc"] for x in self.val_history])
+            cur_auc = self.val_history[-1]["auroc"]
+            if max_auc > 0.85 and cur_auc < 0.83:
+                self.model.stop_training = True
 
-def scale_model(model, scale):
-    params = model.named_parameters()
-    dict_params = dict(params)
-    with torch.no_grad():
-        for name, param in dict_params.items():
-            dict_params[name].set_(dict_params[name].data * scale)
-    return model
+class PhenotypingMetrics(keras.callbacks.Callback):
+    def __init__(self, train_data_gen, val_data_gen, batch_size=32,
+                 early_stopping=True, verbose=2):
+        super(PhenotypingMetrics, self).__init__()
+        self.train_data_gen = train_data_gen
+        self.val_data_gen = val_data_gen
+        self.batch_size = batch_size
+        self.early_stopping = early_stopping
+        self.verbose = verbose
+        self.train_history = []
+        self.val_history = []
 
-def federated_avg(models: Dict[Any, torch.nn.Module]) -> torch.nn.Module:
-    nr_models = len(models)
-    model_list = list(models.values())
-    device = torch.device('cuda' if next(model_list[0].parameters()).is_cuda else 'cpu')
+    def calc_metrics(self, data_gen, history, dataset, logs):
+        y_true = []
+        predictions = []
+        for i in range(data_gen.steps):
+            if self.verbose == 1:
+                print("\tdone {}/{}".format(i, data_gen.steps), end='\r')
+            (x, y) = next(data_gen)
+            outputs = self.model.predict(x, batch_size=self.batch_size)
+            if data_gen.target_repl:
+                y_true += list(y[0])
+                predictions += list(outputs[0])
+            else:
+                y_true += list(y)
+                predictions += list(outputs)
+        print('\n')
+        predictions = np.array(predictions)
+        ret = metrics.print_metrics_multilabel(y_true, predictions)
+        for k, v in ret.items():
+            logs[dataset + '_' + k] = v
+        history.append(ret)
 
-    model = copy.deepcopy(model_list[0])
-    model.to(device)
-    model = scale_model(model, 0.0)
+    def on_epoch_end(self, epoch, logs={}):
+        print("\n==>predicting on train")
+        self.calc_metrics(self.train_data_gen, self.train_history, 'train', logs)
+        print("\n==>predicting on validation")
+        self.calc_metrics(self.val_data_gen, self.val_history, 'val', logs)
 
-    for i in range(nr_models):
-        model = add_model(model, model_list[i])
-    model = scale_model(model, 1.0 / nr_models)
-    return model
+        if self.early_stopping:
+            max_auc = np.max([x["ave_auc_macro"] for x in self.val_history])
+            cur_auc = self.val_history[-1]["ave_auc_macro"]
+            if max_auc > 0.75 and cur_auc < 0.73:
+                self.model.stop_training = True
 
-def get_train_or_test_loss(network_left,network_right,overall_top_layer,
-                           overall_train_dataloader, 
-                           overall_test_dataloader, report, cord_div_idx=16):
-    network_left.eval()
-    network_right.eval()
-    overall_top_layer.eval()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_loss = 0
-    train_correct = 0
-    test_correct= 0
-    test_loss = 0
-    with torch.no_grad():
-        for data, target, indices in overall_train_dataloader:
-            data_left, data_right, target = data[:, :, :, :cord_div_idx].to(device), data[:, :, :, cord_div_idx:].to(device), target.to(device)
-            
-            output_left = network_left(data_left)
-            output_right = network_right(data_right)
+class LengthOfStayMetrics(keras.callbacks.Callback):
+    def __init__(self, train_data_gen, val_data_gen, partition, batch_size=32,
+                 early_stopping=True, verbose=2):
+        super(LengthOfStayMetrics, self).__init__()
+        self.train_data_gen = train_data_gen
+        self.val_data_gen = val_data_gen
+        self.batch_size = batch_size
+        self.partition = partition
+        self.early_stopping = early_stopping
+        self.verbose = verbose
+        self.train_history = []
+        self.val_history = []
 
-            input_top_layer = torch.cat((output_left, output_right), dim=1)
-            output_top = overall_top_layer(input_top_layer)
+    def calc_metrics(self, data_gen, history, dataset, logs):
+        y_true = []
+        predictions = []
+        for i in range(data_gen.steps):
+            if self.verbose == 1:
+                print("\tdone {}/{}".format(i, data_gen.steps), end='\r')
+            (x, y_processed, y) = data_gen.next(return_y_true=True)
+            pred = self.model.predict(x, batch_size=self.batch_size)
+            if isinstance(x, list) and len(x) == 2:  # deep supervision
+                if pred.shape[-1] == 1:  # regression
+                    pred_flatten = pred.flatten()
+                else:  # classification
+                    pred_flatten = pred.reshape((-1, 10))
+                for m, t, p in zip(x[1].flatten(), y.flatten(), pred_flatten):
+                    if np.equal(m, 1):
+                        y_true.append(t)
+                        predictions.append(p)
+            else:
+                if pred.shape[-1] == 1:
+                    y_true += list(y.flatten())
+                    predictions += list(pred.flatten())
+                else:
+                    y_true += list(y)
+                    predictions += list(pred)
+        print('\n')
+        if self.partition == 'log':
+            predictions = [metrics.get_estimate_log(x, 10) for x in predictions]
+            ret = metrics.print_metrics_log_bins(y_true, predictions)
+        if self.partition == 'custom':
+            predictions = [metrics.get_estimate_custom(x, 10) for x in predictions]
+            ret = metrics.print_metrics_custom_bins(y_true, predictions)
+        if self.partition == 'none':
+            ret = metrics.print_metrics_regression(y_true, predictions)
+        for k, v in ret.items():
+            logs[dataset + '_' + k] = v
+        history.append(ret)
 
-            train_loss += F.cross_entropy(output_top, target.long()).item()
-            pred = output_top.data.max(1, keepdim=True)[1]
-            train_correct += pred.eq(target.long().data.view_as(pred)).sum()
-        train_loss /= len(overall_train_dataloader)
-        
-        report["train_loss"].append(train_loss)
-        report["train_accuracy"].append(100. * train_correct / len(overall_train_dataloader.dataset))
-        
-        print('\nEntire Training set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            train_loss, train_correct, len(overall_train_dataloader.dataset),
-            100. * train_correct / len(overall_train_dataloader.dataset)))
+    def on_epoch_end(self, epoch, logs={}):
+        print("\n==>predicting on train")
+        self.calc_metrics(self.train_data_gen, self.train_history, 'train', logs)
+        print("\n==>predicting on validation")
+        self.calc_metrics(self.val_data_gen, self.val_history, 'val', logs)
 
-    with torch.no_grad():
-        for data, target, indices in overall_test_dataloader:
-            data_left, data_right, target = data[:, :, :, :cord_div_idx].to(device), data[:, :, :, cord_div_idx:].to(device), target.to(device)
-            
-            output_left = network_left(data_left)
-            output_right = network_right(data_right)
+        if self.early_stopping:
+            max_kappa = np.max([x["kappa"] for x in self.val_history])
+            cur_kappa = self.val_history[-1]["kappa"]
+            max_train_kappa = np.max([x["kappa"] for x in self.train_history])
+            if max_kappa > 0.38 and cur_kappa < 0.35 and max_train_kappa > 0.47:
+                self.model.stop_training = True
 
-            input_top_layer = torch.cat((output_left, output_right), dim=1)
-            output_top = overall_top_layer(input_top_layer)
+class MultitaskMetrics(keras.callbacks.Callback):
+    def __init__(self, train_data_gen, val_data_gen, partition,
+                 batch_size=32, early_stopping=True, verbose=2):
+        super(MultitaskMetrics, self).__init__()
+        self.train_data_gen = train_data_gen
+        self.val_data_gen = val_data_gen
+        self.batch_size = batch_size
+        self.partition = partition
+        self.early_stopping = early_stopping
+        self.verbose = verbose
+        self.train_history = []
+        self.val_history = []
 
-            test_loss += F.cross_entropy(output_top, target.long()).item()
-            pred = output_top.data.max(1, keepdim=True)[1]
-            test_correct += pred.eq(target.long().data.view_as(pred)).sum()
-        test_loss /= len(overall_test_dataloader)
-        report["test_loss"].append(test_loss)
-        report["test_accuracy"].append(100. * test_correct / len(overall_test_dataloader.dataset))
-        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, test_correct, len(overall_test_dataloader.dataset),
-            100. * test_correct / len(overall_test_dataloader.dataset)))
+    def calc_metrics(self, data_gen, history, dataset, logs):
+        ihm_y_true = []
+        decomp_y_true = []
+        los_y_true = []
+        pheno_y_true = []
 
-def general_get_train_or_test_loss_lstm(networks:List,
-                                   overall_top_layer,
-                                   overall_train_dataloader, 
-                                   overall_test_dataloader, 
-                                   report, coordinate_partitions=None):
-    num_parties = len(networks)
-    for network in networks:
-        network.eval()
-    overall_top_layer.eval()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_loss = 0
-    train_correct = 0
-    test_correct= 0
-    test_loss = 0
-    targets = []
-    probabilities = []
+        ihm_pred = []
+        decomp_pred = []
+        los_pred = []
+        pheno_pred = []
 
-    with torch.no_grad():
-        for data, target, indices in overall_train_dataloader:           
-            vert_data = [data[:, :, coordinate_partitions[i]] for i in range(num_parties)]
-            for i in range(len(vert_data)):
-                vert_data[i] = vert_data[i].to(device)
-            target = target.to(device)
+        for i in range(data_gen.steps):
+            if self.verbose == 1:
+                print("\tdone {}/{}".format(i, data_gen.steps), end='\r')
+            (X, y, los_y_reg) = data_gen.next(return_y_true=True)
+            outputs = self.model.predict(X, batch_size=self.batch_size)
 
-            H_embeddings = [networks[i](vert_data[i]) for i in range(num_parties)]
+            ihm_M = X[1]
+            decomp_M = X[2]
+            los_M = X[3]
 
-            input_top_layer = torch.cat(H_embeddings, dim=1)
-            output_top = overall_top_layer(input_top_layer)[:, 0]
+            if not data_gen.target_repl:  # no target replication
+                (ihm_p, decomp_p, los_p, pheno_p) = outputs
+                (ihm_t, decomp_t, los_t, pheno_t) = y
+            else:  # target replication
+                (ihm_p, _, decomp_p, los_p, pheno_p, _) = outputs
+                (ihm_t, _, decomp_t, los_t, pheno_t, _) = y
 
-            train_loss += F.binary_cross_entropy_with_logits(output_top, target.float()).item()
-            pred = output_top.squeeze()>0.0#data.max(1, keepdim=True)[1]
-            train_correct += pred.float().eq(target.float()).sum() #pred.eq(target.long().data.view_as(pred)).sum()
-            
-            targets.append(target.float().cpu())
-            probabilities.append(torch.sigmoid(output_top.detach().cpu()))
-            
-        train_loss /= len(overall_train_dataloader)
-        
-        report["train_loss"].append(train_loss)
-        report["train_accuracy"].append(100. * train_correct / len(overall_train_dataloader.dataset))
-        probabilities = torch.cat(probabilities)    
-        targets = torch.cat(targets)
-        report["train_ret"].append(print_metrics_binary(targets, probabilities))
-        
-        print('\nEntire Training set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            train_loss, train_correct, len(overall_train_dataloader.dataset),
-            100. * train_correct / len(overall_train_dataloader.dataset)))
-             
-    targets = []
-    probabilities = []
-    with torch.no_grad():
-        for data, target, indices in overall_test_dataloader:
-            vert_data = [data[:, :,coordinate_partitions[i]] for i in range(num_parties)]
-            for i in range(len(vert_data)):
-                vert_data[i] = vert_data[i].to(device)
-            target = target.to(device)
-            
-            H_embeddings = [networks[i](vert_data[i]) for i in range(num_parties)]
+            los_t = los_y_reg  # real value not the label
 
-            input_top_layer = torch.cat(H_embeddings, dim=1)
-            output_top = overall_top_layer(input_top_layer)[:, 0]
+            # ihm
+            for (m, t, p) in zip(ihm_M.flatten(), ihm_t.flatten(), ihm_p.flatten()):
+                if np.equal(m, 1):
+                    ihm_y_true.append(t)
+                    ihm_pred.append(p)
 
-            test_loss += F.binary_cross_entropy_with_logits(output_top, target.float()).item()
-            pred = output_top.squeeze()>0.0
-            test_correct += pred.float().eq(target.float()).sum() 
-            
-            targets.append(target.float().cpu())
-            probabilities.append(torch.sigmoid(output_top.detach().cpu()))
-            
-        test_loss /= len(overall_test_dataloader)
-        
-        report["test_loss"].append(test_loss)
-        report["test_accuracy"].append(100. * test_correct / len(overall_test_dataloader.dataset))
-        probabilities = torch.cat(probabilities)    
-        targets = torch.cat(targets)
-        report["test_ret"].append(print_metrics_binary(targets, probabilities))
-        
-        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, test_correct, len(overall_test_dataloader.dataset),
-            100. * test_correct / len(overall_test_dataloader.dataset)))
+            # decomp
+            for (m, t, p) in zip(decomp_M.flatten(), decomp_t.flatten(), decomp_p.flatten()):
+                if np.equal(m, 1):
+                    decomp_y_true.append(t)
+                    decomp_pred.append(p)
 
-def general_get_train_or_test_loss_lstm_combined(networks:List,
-                                   overall_train_dataloader, 
-                                   overall_test_dataloader, 
-                                   report, coordinate_partitions=None):
-    num_parties = len(networks)
-    for network in networks:
-        network.eval()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_loss = 0
-    train_correct = 0
-    test_correct= 0
-    test_loss = 0
-    targets = []
-    probabilities = []
-    with torch.no_grad():
-        for data, target, indices in overall_train_dataloader:           
-            vert_data = [data[:, :, coordinate_partitions[i]] for i in range(num_parties)]
-            for i in range(len(vert_data)):
-                vert_data[i] = vert_data[i].to(device)
-            target = target.to(device)
+            # los
+            if los_p.shape[-1] == 1:  
+                for (m, t, p) in zip(los_M.flatten(), los_t.flatten(), los_p.flatten()):
+                    if np.equal(m, 1):
+                        los_y_true.append(t)
+                        los_pred.append(p)
+            else:  
+                for (m, t, p) in zip(los_M.flatten(), los_t.flatten(), los_p.reshape((-1, 10))):
+                    if np.equal(m, 1):
+                        los_y_true.append(t)
+                        los_pred.append(p)
 
-            H_embeddings = [networks[i](vert_data[i]) for i in range(num_parties)]
+            # pheno
+            for (t, p) in zip(pheno_t.reshape((-1, 25)), pheno_p.reshape((-1, 25))):
+                pheno_y_true.append(t)
+                pheno_pred.append(p)
+        print('\n')
 
-            input_top_layer = torch.cat(H_embeddings, dim=1)
-            output_top = input_top_layer.sum(dim=1)
+        # ihm
+        print("\n ================= 48h mortality ================")
+        ihm_pred = np.array(ihm_pred)
+        ihm_pred = np.stack([1 - ihm_pred, ihm_pred], axis=1)
+        ret = metrics.print_metrics_binary(ihm_y_true, ihm_pred)
+        for k, v in ret.items():
+            logs[dataset + '_ihm_' + k] = v
 
-            train_loss += F.binary_cross_entropy_with_logits(output_top, target.float()).item()
-            pred = output_top.squeeze()>0.0
-            train_correct += pred.float().eq(target.float()).sum() 
-            
-            targets.append(target.float().cpu())
-            probabilities.append(torch.sigmoid(output_top.detach().cpu()))
-            
-        train_loss /= len(overall_train_dataloader)
-        
-        report["train_loss"].append(train_loss)
-        report["train_accuracy"].append(100. * train_correct / len(overall_train_dataloader.dataset))
-        probabilities = torch.cat(probabilities)    
-        targets = torch.cat(targets)
-        report["train_ret"].append(print_metrics_binary(targets, probabilities))
-        
-        print('\nEntire Training set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            train_loss, train_correct, len(overall_train_dataloader.dataset),
-            100. * train_correct / len(overall_train_dataloader.dataset)))
-               
-    targets = []
-    probabilities = []
-    with torch.no_grad():
-        for data, target, indices in overall_test_dataloader:
-            vert_data = [data[:, :,coordinate_partitions[i]] for i in range(num_parties)]
-            for i in range(len(vert_data)):
-                vert_data[i] = vert_data[i].to(device)
-            target = target.to(device)
-            
-            H_embeddings = [networks[i](vert_data[i]) for i in range(num_parties)]
+        # decomp
+        print("\n ================ decompensation ================")
+        decomp_pred = np.array(decomp_pred)
+        decomp_pred = np.stack([1 - decomp_pred, decomp_pred], axis=1)
+        ret = metrics.print_metrics_binary(decomp_y_true, decomp_pred)
+        for k, v in ret.items():
+            logs[dataset + '_decomp_' + k] = v
 
-            input_top_layer = torch.cat(H_embeddings, dim=1)
-            output_top = input_top_layer.sum(dim=1)
-            
-            test_loss += F.binary_cross_entropy_with_logits(output_top, target.float()).item()
-            pred = output_top.squeeze()>0.0
-            test_correct += pred.float().eq(target.float()).sum() 
-            
-            targets.append(target.float().cpu())
-            probabilities.append(torch.sigmoid(output_top.detach().cpu()))
-            
-        test_loss /= len(overall_test_dataloader)
-        
-        report["test_loss"].append(test_loss)
-        report["test_accuracy"].append(100. * test_correct / len(overall_test_dataloader.dataset))
-        probabilities = torch.cat(probabilities)    
-        targets = torch.cat(targets)
-        report["test_ret"].append(print_metrics_binary(targets, probabilities))
-        
-        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, test_correct, len(overall_test_dataloader.dataset),
-            100. * test_correct / len(overall_test_dataloader.dataset)))
-         
-def accuracy(output, target, topk=(1,)):
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
+        # los
+        print("\n ================ length of stay ================")
+        if self.partition == 'log':
+            los_pred = [metrics.get_estimate_log(x, 10) for x in los_pred]
+            ret = metrics.print_metrics_log_bins(los_y_true, los_pred)
+        if self.partition == 'custom':
+            los_pred = [metrics.get_estimate_custom(x, 10) for x in los_pred]
+            ret = metrics.print_metrics_custom_bins(los_y_true, los_pred)
+        if self.partition == 'none':
+            ret = metrics.print_metrics_regression(los_y_true, los_pred)
+        for k, v in ret.items():
+            logs[dataset + '_los_' + k] = v
 
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
+        # pheno
+        print("\n =================== phenotype ==================")
+        pheno_pred = np.array(pheno_pred)
+        ret = metrics.print_metrics_multilabel(pheno_y_true, pheno_pred)
+        for k, v in ret.items():
+            logs[dataset + '_pheno_' + k] = v
 
-        res = []
-        for k in topk:
-            correct_k = correct[:k].reshape(-1).float().sum()
-            res.append(correct_k.mul_(100.0))
-        return res
-               
-def get_train_or_test_loss_generic(networks:List,
-                                   overall_train_dataloader, 
-                                   overall_test_dataloader, 
-                                   report, coordinate_partitions=None):
-    num_parties = len(networks)
-    for network in networks:
-        network.eval()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_loss = 0
-    train_correct = 0
-    test_correct= 0
-    test_loss = 0
-    train_correct5 = 0
-    test_correct5 = 0
-    with torch.no_grad():
-        for data, target, indices in overall_train_dataloader:
-            vert_data = [data[:, :, :, coordinate_partitions[i]] for i in range(num_parties)]
-            for i in range(len(vert_data)):
-                vert_data[i] = vert_data[i].to(device)
-            target = target.to(device)
-            H_embeddings = [networks[i](vert_data[i]) for i in range(num_parties)]
-            input_top_layer = torch.stack(H_embeddings)
-            output_top = input_top_layer.sum(dim=0)
+        history.append(logs)
 
-            train_loss += F.cross_entropy(output_top, target.long()).item()
-            pred = output_top.data.max(1, keepdim=True)[1]
-            train_correct += pred.eq(target.long().data.view_as(pred)).sum()
-            train_correct5 += accuracy(output_top, target.long(), topk=(5,))[0]
-        train_loss /= len(overall_train_dataloader)
-        
-        report["train_loss"].append(train_loss)
-        report["train_accuracy"].append(100. * train_correct / len(overall_train_dataloader.dataset))
-        report["train_accuracy5"].append(train_correct5 / len(overall_train_dataloader.dataset))
-        
-        print('\nEntire Training set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%) ({:.0f}%)\n'.format(
-            train_loss, train_correct, len(overall_train_dataloader.dataset),
-            100. * train_correct / len(overall_train_dataloader.dataset),
-            train_correct5 / len(overall_train_dataloader.dataset)))
+    def on_epoch_end(self, epoch, logs={}):
+        print("\n==>predicting on train")
+        self.calc_metrics(self.train_data_gen, self.train_history, 'train', logs)
+        print("\n==>predicting on validation")
+        self.calc_metrics(self.val_data_gen, self.val_history, 'val', logs)
 
-    with torch.no_grad():
-        for data, target, indices in overall_test_dataloader:
-            vert_data = [data[:, :, :, coordinate_partitions[i]] for i in range(num_parties)]
-            for i in range(len(vert_data)):
-                vert_data[i] = vert_data[i].to(device)
-            target = target.to(device)
+        if self.early_stopping:
+            ihm_max_auc = np.max([x["val_ihm_auroc"] for x in self.val_history])
+            ihm_cur_auc = self.val_history[-1]["val_ihm_auroc"]
+            pheno_max_auc = np.max([x["val_pheno_ave_auc_macro"] for x in self.val_history])
+            pheno_cur_auc = self.val_history[-1]["val_pheno_ave_auc_macro"]
+            if (pheno_max_auc > 0.75 and pheno_cur_auc < 0.73) and (ihm_max_auc > 0.85 and ihm_cur_auc < 0.83):
+                self.model.stop_training = True
 
-            H_embeddings = [networks[i](vert_data[i]) for i in range(num_parties)]
-            
-            input_top_layer = torch.stack(H_embeddings)
-            output_top = input_top_layer.sum(dim=0)
-            
-            test_loss += F.cross_entropy(output_top, target.long()).item()
-            pred = output_top.data.max(1, keepdim=True)[1]
-            test_correct += pred.eq(target.long().data.view_as(pred)).sum()
-            test_correct5 += accuracy(output_top, target.long(), topk=(5,))[0]
-        test_loss /= len(overall_test_dataloader)
-        
-        report["test_loss"].append(test_loss)
-        report["test_accuracy"].append(100. * test_correct / len(overall_test_dataloader.dataset))
-        report["test_accuracy5"].append(test_correct5 / len(overall_test_dataloader.dataset))       
-        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%) ({:.0f}%)\n'.format(
-            test_loss, test_correct, len(overall_test_dataloader.dataset),
-            100. * test_correct / len(overall_test_dataloader.dataset),
-            test_correct5 / len(overall_test_dataloader.dataset)))        
-          
-def get_train_or_test_loss_simplified_cifar(network_left,network_right,overall_train_dataloader, 
-                           overall_test_dataloader, report, cord_div_idx=16):
-    network_left.eval()
-    network_right.eval()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_loss = 0
-    train_correct = 0
-    test_correct= 0
-    test_loss = 0
-    with torch.no_grad():
-        for data, target, indices in overall_train_dataloader:
-            data_left, data_right, target = data[:, :, :, :cord_div_idx].to(device), data[:, :, :, cord_div_idx:].to(device), target.to(device)
-            
-            output_left = network_left(data_left)
-            output_right = network_right(data_right)
+def softmax(x, axis, mask=None):
+    if mask is None:
+        mask = K.constant(True)
+    mask = K.cast(mask, K.floatx())
+    if K.ndim(x) is K.ndim(mask) + 1:
+        mask = K.expand_dims(mask)
 
-            output_top = output_right + output_left
+    m = K.max(x, axis=axis, keepdims=True)
+    e = K.exp(x - m) * mask
+    s = K.sum(e, axis=axis, keepdims=True)
+    s += K.cast(K.cast(s < K.epsilon(), K.floatx()) * K.epsilon(), K.floatx())
+    return e / s
 
-            train_loss += F.cross_entropy(output_top, target.long()).item()
-            pred = output_top.data.max(1, keepdim=True)[1]
-            train_correct += pred.eq(target.long().data.view_as(pred)).sum()
-        train_loss /= len(overall_train_dataloader)
-        
-        report["train_loss"].append(train_loss)
-        report["train_accuracy"].append(100. * train_correct / len(overall_train_dataloader.dataset))
-        
-        print('\nEntire Training set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            train_loss, train_correct, len(overall_train_dataloader.dataset),
-            100. * train_correct / len(overall_train_dataloader.dataset)))
+def _collect_attention(x, a, mask):
+    if K.ndim(a) == 2:
+        a = K.expand_dims(a)
+    a = softmax(a, axis=1, mask=mask)  
+    return K.sum(x * a, axis=1)  
 
-    with torch.no_grad():
-        for data, target, indices in overall_test_dataloader:
-            data_left, data_right, target = data[:, :, :, :cord_div_idx].to(device), data[:, :, :, cord_div_idx:].to(device), target.to(device)
-            
-            output_left = network_left(data_left)
-            output_right = network_right(data_right)
+class CollectAttetion(Layer):
+    def __init__(self, **kwargs):
+        self.supports_masking = True
+        super(CollectAttetion, self).__init__(**kwargs)
 
-            output_top = output_right + output_left
+    def call(self, inputs, mask=None):
+        x = inputs[0]
+        a = inputs[1]
+        return _collect_attention(x, a, mask[0])
 
-            test_loss += F.cross_entropy(output_top, target.long()).item()
-            pred = output_top.data.max(1, keepdim=True)[1]
-            test_correct += pred.eq(target.long().data.view_as(pred)).sum()
-        test_loss /= len(overall_test_dataloader)
-        
-        report["test_loss"].append(test_loss)
-        report["test_accuracy"].append(100. * test_correct / len(overall_test_dataloader.dataset))
-        
-        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, test_correct, len(overall_test_dataloader.dataset),
-            100. * test_correct / len(overall_test_dataloader.dataset)))
+    def compute_output_shape(self, input_shape):
+        return input_shape[0][0], input_shape[0][2]
 
-# if __name__ == "__main__":
-#     one = nn.Conv2d(20, 13, 3)
-#     two =nn.Conv2d(20, 13, 3)
-#     three = nn.Conv2d(20, 13, 3)
-#     bb = federated_avg({1:one, 2:two, 3:three})
-#     assert torch.isclose(bb.weight.data, (one.weight.data + two.weight.data + three.weight.data)/3.0).sum() == bb.weight.data.numel()
+    def compute_mask(self, input, input_mask=None):
+        return None
+
+class Slice(Layer):
+    def __init__(self, indices, **kwargs):
+        self.supports_masking = True
+        self.indices = indices
+        super(Slice, self).__init__(**kwargs)
+
+    def call(self, x, mask=None):
+        if K.backend() == 'tensorflow':
+            xt = tf.transpose(x, perm=(2, 0, 1))
+            gt = tf.gather(xt, self.indices)
+            return tf.transpose(gt, perm=(1, 2, 0))
+        return x[:, :, self.indices]
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], input_shape[1], len(self.indices))
+
+    def compute_mask(self, input, input_mask=None):
+        return input_mask
+
+    def get_config(self):
+        return {'indices': self.indices}
+
+class GetTimestep(Layer):
+
+    def __init__(self, pos=-1, **kwargs):
+        self.pos = pos
+        self.supports_masking = True
+        super(GetTimestep, self).__init__(**kwargs)
+
+    def call(self, x, mask=None):
+        return x[:, self.pos, :]
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], input_shape[2])
+
+    def compute_mask(self, input, input_mask=None):
+        return None
+
+    def get_config(self):
+        return {'pos': self.pos}
+
+LastTimestep = GetTimestep
+
+class ExtendMask(Layer):
+    def __init__(self, add_epsilon=False, **kwargs):
+        self.supports_masking = True
+        self.add_epsilon = add_epsilon
+        super(ExtendMask, self).__init__(**kwargs)
+
+    def call(self, x, mask=None):
+        return x[0]
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
+
+    def compute_mask(self, input, input_mask=None):
+        if self.add_epsilon:
+            return input[1] + K.epsilon()
+        return input[1]
+
+    def get_config(self):
+        return {'add_epsilon': self.add_epsilon}
