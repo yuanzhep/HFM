@@ -165,8 +165,7 @@ def main():
         training_device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
         print(f"m40 using device: {training_device}")
         logging.info(f"m40_Using device: {training_device}")
-
-        WHICH_COORDINATE_INDEX_TO_DIST = 3
+        # COORDINATE_INX = 3
         if args.modelnet_type == "40":
             modelnet_40_dir = "/a/bear.cs.fiu.edu./disk/bear-c/users/rxm1351/yz/0108fedmm/fedmm/view/classes/"
         logging.info(f"Loading from {modelnet_40_dir}")
@@ -200,15 +199,15 @@ def main():
         decreasing_step = False
 
         dc_list = []
-        global_weights = np.zeros((X_train.shape[WHICH_COORDINATE_INDEX_TO_DIST], 1))
+        global_weights = np.zeros((X_train.shape[COORDINATE_INX], 1))
         global_indices = list(range(len(X_train)))
         GLOBAL_INDICES = list(range(len(X_train)))
 
         coordinate_partitions = []
-        coordinate_per_dc = int(X_train.shape[WHICH_COORDINATE_INDEX_TO_DIST]/K)
-        extradatapointsinfirstdevice = X_train.shape[WHICH_COORDINATE_INDEX_TO_DIST] - coordinate_per_dc*K
+        coordinate_per_dc = int(X_train.shape[COORDINATE_INX]/K)
+        extradatapointsinfirstdevice = X_train.shape[COORDINATE_INX] - coordinate_per_dc*K
         i = 0
-        while i < X_train.shape[WHICH_COORDINATE_INDEX_TO_DIST]:
+        while i < X_train.shape[COORDINATE_INX]:
             if extradatapointsinfirstdevice>0:
                 coordinate_partitions.append(list(range(i, i+ coordinate_per_dc + 1)))
                 extradatapointsinfirstdevice-=1
