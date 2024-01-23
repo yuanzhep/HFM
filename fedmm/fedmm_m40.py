@@ -9,6 +9,7 @@ v1.2, 0116/2024/0917, check VFL correct.
 v1.3, 0116/2024/1508, check HFL correct.
 v1.4, 0116/2024, Running on cuda:0, 29,881 MiB memory.
 v1.5, 0120/2024, fix one minor issue about def main.
+v1.6, 0121/2024, run on cuda0 runway, V100
 """
 
 import logging
@@ -253,8 +254,6 @@ def main():
                   "test_accuracy": [],
                   "train_accuracy5":[],
                   "test_accuracy5": [],
-                  "train_ret":[],
-                  "test_ret":[],
                   "hyperparameters":args
                   }
 
