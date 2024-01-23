@@ -21,7 +21,6 @@ import numpy as np
 import random
 import pandas as pd
 from timeit import default_timer as timer
-import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, r2_score, roc_auc_score
 from sklearn.datasets import load_svmlight_file
 import pickle
@@ -39,6 +38,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from pytorch_utils import CustomTensorDataset, normalize, federated_avg, get_train_or_test_loss_generic
+import matplotlib.pyplot as plt
 
 def log_time(file, string=""):
     if string == "":
@@ -354,6 +354,16 @@ def main():
                 filename =f"BS{local_batch_size}_M{M}_K{K}_Q{VFL_iter}_R{HFL_iter}_lr[{alpha},0.005,0.001]_momentum{momentum}_seed{args.seed}_sampling{args.withreplacement}_eval{args.evaluateateveryiteration}_evalafter{args.evalafter}_modelnet{args.modelnet_type}.pkl" 
             f = open(os.path.join(args.resultfolder, filename), "wb")
             pickle.dump(report, f)
+            # plt.figure(figsize=(8, 6))
+            # plt.plot(timeline, loss, label=f"Epoch {t}")
+            # plt.legend()
+            # plt.xlabel("Iterations")
+            # plt.ylabel("Loss")
+            # plt.title(f"ModelNet40_10_R1_K2_M5_cuda0_0115_2024", fontsize=20)
+            # save_folder = '/a/bear.cs.fiu.edu./disk/bear-c/users/rxm1351/yz/0108fedmm/fedmm/save_model_2/Q_plot/'
+            # save_path = os.path.join(save_folder, f'loss_ModelNet40_10_R1_K2_M5_cuda0_0115_2024.pdf')
+            # plt.savefig(save_path)
+            # plt.show()
 
 if __name__ == "__main__":
     main()
