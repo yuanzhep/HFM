@@ -42,7 +42,7 @@ def load_xy(root, data_type, transform=None):
 
     return x_data, x_files, y
 
-def load_modelnet_10_data(data_dir):
+def load_modelnet_40_data(data_dir):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     transform1 =transforms.Compose([
@@ -68,7 +68,7 @@ def load_modelnet_10_data(data_dir):
 if __name__ == "__main__":
     modelnet_40_dir = "/a/bear.cs.fiu.edu./disk/bear-c/users/rxm1351/yz/0108fedmm/fedmm/view/classes/"
     train_data, train_filenames, train_labels, test_data, test_filenames, test_labels, label_names = \
-        load_modelnet_10_data(modelnet_40_dir)
+        load_modelnet_40_data(modelnet_40_dir)
     print("Train data: ", train_data.shape)
     print("Train filenames: ", train_filenames.shape)
     print("Train labels: ", train_labels.shape)
