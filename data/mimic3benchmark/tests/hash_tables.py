@@ -1,6 +1,7 @@
+# 0122/2024, fedmm
+
 from __future__ import absolute_import
 from __future__ import print_function
-
 from tqdm import tqdm
 
 import pickle as pkl
@@ -9,14 +10,12 @@ import os
 import argparse
 import pandas as pd
 
-
 def formatter(x):
     try:
         x = float(x)
         return '{:.1f}'.format(x)
     except:
         return x
-
 
 def main():
     parser = argparse.ArgumentParser(description='Recursively produces hashes for all tables inside this directory')
@@ -68,7 +67,6 @@ def main():
     os.chdir(initial_dir)
     with open(args.output_file, 'wb') as f:
         pkl.dump(hashes, f)
-
 
 if __name__ == "__main__":
     main()
