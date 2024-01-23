@@ -618,7 +618,7 @@ def get_train_or_test_loss_generic(networks:List,
             100. * test_correct / len(overall_test_dataloader.dataset),
             test_correct5 / len(overall_test_dataloader.dataset)))        
           
-def get_train_or_test_loss_simplified_cifar(network_left,network_right,overall_train_dataloader, 
+def get_train_or_test_loss_simplified_m40(network_left,network_right,overall_train_dataloader, 
                            overall_test_dataloader, report, cord_div_idx=16):
     network_left.eval()
     network_right.eval()
