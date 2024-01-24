@@ -12,7 +12,7 @@ You can get access to the Mimic-III data [here](https://physionet.org/content/mi
 wget -r -N -c -np --user yzpeng --ask-password https://physionet.org/files/mimiciii/1.4/
 ```
 
-Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/). In order to preprocess the data:
+Please note that although MIMIC-III is a public data set, when it comes to medical privacy information, you still need to complete a brief online course to download the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/).
     
 The following command takes MIMIC-III CSVs, generates one directory per `SUBJECT_ID` and writes ICU stay information to `data/{SUBJECT_ID}/stays.csv`, diagnoses to `data/{SUBJECT_ID}/diagnoses.csv`, and events to `data/{SUBJECT_ID}/events.csv`. 
 ```bash
