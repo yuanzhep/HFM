@@ -6,13 +6,13 @@ FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome t
 
 You can access the ModelNet-40 data [here](https://modelnet.cs.princeton.edu/).
 
-You can access the (full) Mimic-III data [here](https://physionet.org/content/mimiciii/1.4/). Download the files using your terminal with the following command:
+You can get access to the Mimic-III data [here](https://physionet.org/content/mimiciii-demo/1.4/). Download the files using your terminal with the following command:
+
 ```bash
 wget -r -N -c -np --user yzpeng --ask-password https://physionet.org/files/mimiciii/1.4/
 ```
 
-### Preprocessing the mimic3 dataset
-First, you can get access to the MIMIC-III .csv files [here](https://physionet.org/content/mimiciii-demo/1.4/). Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/). In order to preprocess the data:
+Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/). In order to preprocess the data:
     
 The following command takes MIMIC-III CSVs, generates one directory per `SUBJECT_ID` and writes ICU stay information to `data/{SUBJECT_ID}/stays.csv`, diagnoses to `data/{SUBJECT_ID}/diagnoses.csv`, and events to `data/{SUBJECT_ID}/events.csv`. 
 ```bash
