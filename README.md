@@ -12,7 +12,7 @@ wget -r -N -c -np --user yzpeng --ask-password https://physionet.org/files/mimic
 ```
 
 ### Preprocessing the mimic3 dataset
-First, you can get access to the (demo) MIMIC-III .csv files: [here](https://physionet.org/content/mimiciii-demo/1.4/). Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/). In order to preprocess the data:
+First, you can get access to the MIMIC-III .csv files [here](https://physionet.org/content/mimiciii-demo/1.4/). Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/). In order to preprocess the data:
     
 The following command takes MIMIC-III CSVs, generates one directory per `SUBJECT_ID` and writes ICU stay information to `data/{SUBJECT_ID}/stays.csv`, diagnoses to `data/{SUBJECT_ID}/diagnoses.csv`, and events to `data/{SUBJECT_ID}/events.csv`. 
 ```bash
