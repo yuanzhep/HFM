@@ -14,11 +14,11 @@ wget -r -N -c -np --user yzpeng --ask-password https://physionet.org/files/mimic
 
 
 ### Preprocessing the mimic3 dataset
-First, you can get access to the (demo) MIMIC-III .csv files: [physionet.org/content/mimiciii-demo/1.4/](https://physionet.org/content/mimiciii-demo/1.4/)  Please note that access to (full) mimic3 requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found at the bottom of this page: [MIMIC-III Data Requirements](https://physionet.org/content/mimiciii/1.4/).
+First, you can get access to the (demo) MIMIC-III .csv files: [here](https://physionet.org/content/mimiciii-demo/1.4/). Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/).
 
 In order to preprocess the data:
     
-a. The following command takes MIMIC-III CSVs, generates one directory per `SUBJECT_ID` and writes ICU stay information to `data/{SUBJECT_ID}/stays.csv`, diagnoses to `data/{SUBJECT_ID}/diagnoses.csv`, and events to `data/{SUBJECT_ID}/events.csv`. 
+I<sup>1</sup>. The following command takes MIMIC-III CSVs, generates one directory per `SUBJECT_ID` and writes ICU stay information to `data/{SUBJECT_ID}/stays.csv`, diagnoses to `data/{SUBJECT_ID}/diagnoses.csv`, and events to `data/{SUBJECT_ID}/events.csv`. 
 ```bash
 python -m mimic3benchmark.scripts.extract_subjects /a/bear.cs.fiu.edu./disk/bear-c/users/rxm1351/yz/0108fedmm/mimic3-benchmarks/physionet.org/files/mimiciii/1.4/ data/root/
 ```
