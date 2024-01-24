@@ -10,8 +10,6 @@ You can access the (full) Mimic-III data [here](https://physionet.org/content/mi
 ```bash
 wget -r -N -c -np --user yzpeng --ask-password https://physionet.org/files/mimiciii/1.4/
 ```
-![FedMM-D](fig/m3.jpg)
-
 
 ### Preprocessing the mimic3 dataset
 First, you can get access to the (demo) MIMIC-III .csv files: [here](https://physionet.org/content/mimiciii-demo/1.4/). Please note that access to (full) MIMIC-III requires completion of a brief online course prior to downloading the raw files. Detailed data requirements can be found [here](https://physionet.org/content/mimiciii/1.4/). In order to preprocess the data:
