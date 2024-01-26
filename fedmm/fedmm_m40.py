@@ -154,7 +154,7 @@ def main():
     log_path = '/a/bear.cs.fiu.edu./disk/bear-c/users/rxm1351/yz/0108fedmm/fedmm/log/m40/'
     log_filename = f"{log_path}modelnet40_0115_log_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    seeds = [618, 1111, 1022, 33134, 33143, 3407, 33146, 10086, 110, 33156]
+    seeds = [10086, 33156, 618, 1111, 42, 1024, 3407, 33146, 110, 114514]
     for seed in seeds:
         args = parse_args()
         args.seed = seed
