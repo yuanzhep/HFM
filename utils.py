@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 yz
-01/13/2024, silo avg
+01/13/2024, fedmm silo avg
+01/24/2024, fix index issue 
 """
 
 import numpy as np
