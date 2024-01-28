@@ -11,6 +11,7 @@ v1.4, 0116/2024, Running on cuda:0, 29,881 MiB memory.
 v1.5, 0120/2024, fix one minor issue about def main.
 v1.6, 0121/2024, run on cuda0 runway, V100
 v1.6, 0123/2024, run on cuda1, PID 93782
+v1.7, 0125/2024, fit on m3 data, check
 """
 
 import logging
