@@ -1,4 +1,5 @@
 # 0124/2024, fedmm
+# 0127/2024, fit id subject
 
 from keras.models import Model
 from keras.layers import Input, Dense, LSTM, Masking, Dropout
