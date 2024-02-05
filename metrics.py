@@ -1,4 +1,4 @@
-# 0123/2024, fedmm ihm task
+# 0123/2024, fedmm, m3 dataset ihm task
 
 import numpy as np
 from sklearn import metrics
