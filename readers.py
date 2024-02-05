@@ -1,3 +1,5 @@
+# 0127/2024, fedmm, fix id subject
+
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -134,7 +136,6 @@ class LengthOfStayReader(Reader):
                 "y": y,
                 "header": header,
                 "name": name}
-
 
 class PhenotypingReader(Reader):
     def __init__(self, dataset_dir, listfile=None):
