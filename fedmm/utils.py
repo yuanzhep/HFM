@@ -1,4 +1,5 @@
 # 0123/2024, fedmm only consider ihm
+# 0207/2024, fit for m40
 
 import numpy as np
 import keras
