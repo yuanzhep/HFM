@@ -1,4 +1,5 @@
 # 0124/2024, fedmm
+# 0211/2024, fit for m3 subject
 
 from keras.models import Model
 from keras.layers import Input, Dense, LSTM, Masking, Dropout
