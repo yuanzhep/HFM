@@ -13,7 +13,7 @@ v1.6, 0121/2024, run on cuda0 runway, V100
 v1.6, 0123/2024, run on cuda1, PID 93782
 v1.7, 0125/2024, fit on m3 data, check
 v1.7, 0125/2024, run on Q=3
-v2.0, 0206/2024, todo: (1) communication cost (2) deploy on distributed Nano (3) FL comm
+v2.0, 0206/2024, todo: (1) communication cost (2) deploy on distributed Nano (3) FL comm, socket
 """
 
 import logging
