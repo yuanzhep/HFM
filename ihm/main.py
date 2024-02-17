@@ -1,5 +1,5 @@
 # 0123/2024, fedmm
-# 0210/2024, fit for full data
+# 0210/2024, fit for full m3 data, dim check done
 
 import numpy as np
 import argparse
