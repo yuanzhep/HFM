@@ -49,3 +49,5 @@ Each of them contains bunch of ICU stays and one file with name `listfile.csv`, 
 Each row of `listfile.csv` has the following form: `icu_stay, period_length, label(s)`.
 A row specifies a sample for which the input is the collection of ICU event of `icu_stay` that occurred in the first `period_length` hours of the stay and the target is/are `label(s)`.
 In in-hospital mortality prediction task `period_length` is always 48 hours, so it is not listed in corresponding listfiles.
+
+Note: Without Regard To Privacy Preserving (which means that use [DP](https://en.wikipedia.org/wiki/Differential_privacy), [FE](https://en.wikipedia.org/wiki/Functional_encryption), [FHE](https://en.wikipedia.org/wiki/Homomorphic_encryption), and so forth to protect embeding data or grads in transfering process
