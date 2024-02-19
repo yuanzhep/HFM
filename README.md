@@ -2,7 +2,7 @@
 
 FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome to share your ideas by opening an issue or dropping me an email at [ypeng@miami.edu](mailto:ypeng@miami.edu).
 
-In this version of FedMM, without regard to even safer privacy preservation (i.e., [DP](https://en.wikipedia.org/wiki/Differential_privacy), [FE](https://en.wikipedia.org/wiki/Functional_encryption), [FHE](https://en.wikipedia.org/wiki/Homomorphic_encryption), and so forth to protect embedding data or gradients in the transferring process.
+In this version of FedMM, without regard to even safer privacy preservation, i.e., [DP](https://en.wikipedia.org/wiki/Differential_privacy), [FE](https://en.wikipedia.org/wiki/Functional_encryption), [FHE](https://en.wikipedia.org/wiki/Homomorphic_encryption), and so forth to protect embedding data or gradients in the transferring process.
 
 <img src="fig/memory.jpg" width="400">
 
