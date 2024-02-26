@@ -16,6 +16,7 @@ v1.7, 0125/2024, run on Q=3
 v2.0, 0206/2024, communication cost sim
 v2.1, 0208/2024, deploy on distributed TX2
 v2.2, 0215/2024, socket comm for server and client
+v2.2, 0218/2024, $t_{RQ} = RQ \times t_{\text{comp}}  + 2 R \times t_{\text{Vcomm}} + 2 \times t_{\text{Hcomm}}$
 """
 
 import logging
