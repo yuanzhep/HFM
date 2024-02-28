@@ -1,6 +1,0 @@
-2024-01-14 17:25:54,056 - INFO - Using device: cuda:3
-2024-01-14 17:25:54,059 - INFO - Using device: cuda:0
-2024-01-14 17:25:54,067 - INFO - Using device: cuda:1
-2024-01-14 17:25:54,067 - INFO - Using device: cuda:2
-2024-01-14 17:26:36,113 - INFO - Epoch 0/3000
-2024-01-14 17:27:55,081 - INFO - Epoch 1/3000
