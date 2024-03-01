@@ -1,0 +1,44 @@
+Epoch: 1 Time for training model A: 3.4380338191986084
+Epoch: 1 Time for training model B: 3.143272876739502
+Epoch: 1 Time for training model C: 0.873969078063965
+Epoch: 2 Time for training model A: 2.895735502243042
+Epoch: 2 Time for training model B: 2.918674945831299
+Epoch: 2 Time for training model C: 0.512146472930908
+Epoch: 3 Time for training model A: 2.9517884254455566
+Epoch: 3 Time for training model B: 3.0006191730499268
+Epoch: 3 Time for training model C: 0.6002745628356934
+Epoch: 4 Time for training model A: 2.9260730743408203
+Epoch: 4 Time for training model B: 3.0203847885131836
+Epoch: 4 Time for training model C: 0.468076467514038
+Epoch: 5 Time for training model A: 2.9220528602600098
+Epoch: 5 Time for training model B: 2.903110980987549
+Epoch: 5 Time for training model C: 0.0500006675720215
+Epoch: 6 Time for training model A: 2.9109768867492676
+Epoch: 6 Time for training model B: 2.890012502670288
+Epoch: 6 Time for training model C: 0.129777908325195
+Epoch: 7 Time for training model A: 2.954266309738159
+Epoch: 7 Time for training model B: 2.8923611640930176
+Epoch: 7 Time for training model C: 0.472238779067993
+Epoch: 8 Time for training model A: 2.8987812995910645
+Epoch: 8 Time for training model B: 2.8871359825134277
+Epoch: 8 Time for training model C: 0.7279562950134277
+Epoch: 9 Time for training model A: 2.887756109237671
+Epoch: 9 Time for training model B: 2.9057257175445557
+Epoch: 9 Time for training model C: 0.00823187828064
+Epoch: 10 Time for training model A: 2.890934467315674
+Epoch: 10 Time for training model B: 2.9077839851379395
+Epoch: 10 Time for training model C: 0.6010115146636963
+Epoch: 1 Time for combined training: 5.330783128738403
+Epoch: 2 Time for combined training: 4.7971866130828857
+Epoch: 3 Time for combined training: 4.774646282196045
+Epoch: 4 Time for combined training: 4.768648624420166
+Epoch: 5 Time for combined training: 4.840022325515747
+Epoch: 6 Time for combined training: 4.796268939971924
+Epoch: 7 Time for combined training: 4.815554618835449
+Epoch: 8 Time for combined training: 4.7756881713867188
+Epoch: 9 Time for combined training: 4.7382514476776123
+Epoch: 10 Time for combined training: 4.7511746883392334
+Number of parameters in combined model: 205534
+Number of parameters in model A: 101770
+Number of parameters in model B: 101770
+Number of parameters in model C: 1994
