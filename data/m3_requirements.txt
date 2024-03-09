@@ -1,0 +1,11 @@
+tqdm
+Keras==2.1.2
+tensorflow==1.15.0
+protobuf==3.19.0
+pandas==1.2.5
+scikit-learn==1.0.2
+numpy==1.16.5
+pyyaml==6.0
+pytz=2019.3=py_0
+qt=5.9.7=h5867ecd_1
+syft==0.2.7
