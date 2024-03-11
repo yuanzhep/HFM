@@ -1,6 +1,6 @@
-# FedMM-D
+# HFM
 
-FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome to share your ideas by opening an issue or dropping me an email at [ypeng@miami.edu](mailto:ypeng@miami.edu).
+HFM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome to share your ideas by opening an issue or dropping me an email at [ypeng@miami.edu](mailto:ypeng@miami.edu).
 
 In this version of FedMM-D, there is no consideration for additional privacy safeguards such as [Differential Privacy](https://en.wikipedia.org/wiki/Differential_privacy), [Functional Encryption](https://en.wikipedia.org/wiki/Functional_encryption), [Homomorphic Encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption), etc., to secure the embedding or gradients during the communication process.
 
