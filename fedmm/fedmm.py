@@ -144,7 +144,7 @@ def parse_args():
     parser.add_argument('--gepochs', type=int, nargs='?', default=300)
     parser.add_argument('--VFL', type=int, nargs='?', default=5)
     parser.add_argument('--HFL', type=int, nargs='?', default=2)
-    parser.add_argument('--batchsize', type=int, nargs='?', default=512)
+    parser.add_argument('--batchsize', type=int, nargs='?', default=64)
     parser.add_argument('--lr', type=float, nargs='?', default=0.001)
     parser.add_argument('--evalafter', type=float, nargs='?', default=1)
     parser.add_argument('--withreplacement', action='store_true')
