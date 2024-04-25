@@ -1,2 +1,2 @@
-# FedMM -> HFM -> HFC (compressed version)
+# FedMM -> HFM (IoT version) -> HFC (compressed version)
 in progress
