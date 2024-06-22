@@ -1,0 +1,2 @@
+Jetson Xavier NX Developer Kit
+https://developer.nvidia.com/embedded/learn/get-started-jetson-xavier-nx-devkit
