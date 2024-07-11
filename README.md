@@ -1,11 +1,11 @@
 # FedMM -> HFM -> HFC (in progress)
 FedMM Research Project (Provably), advised by Dr. Jie Xu. You are also welcome to share your ideas by opening an issue or dropping me an email at [ypeng@miami.edu](mailto:ypeng@miami.edu).
 
-## testbed
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/WtCe4LvQ7do" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
 In this version of FedMM, there is no consideration for additional privacy safeguards such as [Differential Privacy](https://en.wikipedia.org/wiki/Differential_privacy), [Functional Encryption](https://en.wikipedia.org/wiki/Functional_encryption), [Homomorphic Encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption), etc., to secure the embedding or gradients during the communication process.
+
+## Testbed
+
+[![Watch the video](https://img.youtube.com/vi/WtCe4LvQ7do/0.jpg)](https://www.youtube.com/watch?v=WtCe4LvQ7do)
 
 <img src="fig/memory.jpg" width="400">
 
