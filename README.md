@@ -6,8 +6,8 @@ In this version of FedMM, there is no consideration for additional privacy safeg
 The experiment is divided into two parts. One part involves utilizing two large datasets and implementing them on powerful GPUs. The other part consists of testbed experiments using a small dataset, utilizing a total of 6 Jetson devices: 3 Nvidia Jetson TX2 and 3 Nvidia Jetson Xavier NX. [Watch the video](https://www.youtube.com/watch?v=WtCe4LvQ7do)
 [![Watch the video](https://img.youtube.com/vi/WtCe4LvQ7do/0.jpg)](https://www.youtube.com/watch?v=WtCe4LvQ7do)
 
-![Memory](fig/memory.jpg)
 This image shows the memory usage during GPU experiments.
+<img src="fig/memory.jpg" width="300">
 
 You can access the ModelNet-40 data [here](https://modelnet.cs.princeton.edu/).
 
