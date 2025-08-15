@@ -1,7 +1,5 @@
 CoFLow Research Project. You are also welcome to share your ideas by opening an issue or dropping me an email at [pengy1@ufl.edu](mailto:pengy1@ufl.edu).
 
-In this version of FedMM, there is no consideration for additional privacy safeguards such as [Differential Privacy](https://en.wikipedia.org/wiki/Differential_privacy), [Functional Encryption](https://en.wikipedia.org/wiki/Functional_encryption), [Homomorphic Encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption), etc., to secure the embedding or gradients during the communication process.
-
 The experiment is divided into two parts. One part involves utilizing two large datasets and implementing them on powerful GPUs. The other part consists of testbed experiments using a small dataset, utilizing a total of 6 Jetson devices: 3 Nvidia Jetson TX2 and 3 Nvidia Jetson Xavier NX. [Watch the video](https://www.youtube.com/watch?v=WtCe4LvQ7do)
 [![Watch the video](https://img.youtube.com/vi/WtCe4LvQ7do/0.jpg)](https://www.youtube.com/watch?v=WtCe4LvQ7do)
 
