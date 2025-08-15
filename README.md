@@ -1,5 +1,4 @@
-# FedMM -> HFM -> HFC
-FedMM Research Project. You are also welcome to share your ideas by opening an issue or dropping me an email at [ypeng@miami.edu](mailto:ypeng@miami.edu).
+CoFLow Research Project. You are also welcome to share your ideas by opening an issue or dropping me an email at [pengy1@ufl.edu](mailto:pengy1@ufl.edu).
 
 In this version of FedMM, there is no consideration for additional privacy safeguards such as [Differential Privacy](https://en.wikipedia.org/wiki/Differential_privacy), [Functional Encryption](https://en.wikipedia.org/wiki/Functional_encryption), [Homomorphic Encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption), etc., to secure the embedding or gradients during the communication process.
 
